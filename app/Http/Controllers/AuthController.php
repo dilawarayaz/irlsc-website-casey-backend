@@ -71,11 +71,14 @@ class AuthController extends Controller
 
     public function show(Request $request)
     {
+        $user = $request->user()->load(['answers.question', 'images']);
+
         return response()->json([
             'success' => true,
-            'data' => new UserResource($request->user()),
+            'data' => new UserResource($user),
         ]);
     }
+
 
 
     public function update(Request $request)

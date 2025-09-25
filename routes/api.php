@@ -1,5 +1,7 @@
 <?php
 
+
+use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\MatchController;
 use App\Http\Controllers\UserImageController;
 use App\Http\Controllers\UserProfileController;
@@ -11,7 +13,8 @@ use App\Http\Controllers\QuestionController;
 // Existing auth routes (assume you have them)
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
-
+Route::get('/getall-users', [AdminUserController::class, 'index']);
+Route::get('/users/{id}', [AdminUserController::class, 'show']);
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Route::get('user/profile', [UserProfileController::class, 'show']);

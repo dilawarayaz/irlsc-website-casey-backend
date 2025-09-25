@@ -11,7 +11,7 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable; // <-- add HasApiTokens
 
-     protected $fillable = [
+    protected $fillable = [
         'name',
         'email',
         'password',
@@ -37,12 +37,16 @@ class User extends Authenticatable
     ];
 
 
-    function profile(){
+    function profile()
+    {
         return $this->hasOne(Profile::class);
     }
     public function images()
-{
-    return $this->hasMany(UserImage::class, 'user_id');
-}
-
+    {
+        return $this->hasMany(UserImage::class, 'user_id');
+    }
+    public function answers()
+    {
+        return $this->hasMany(\App\Models\UserAnswer::class);
+    }
 }
