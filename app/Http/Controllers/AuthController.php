@@ -63,6 +63,7 @@ class AuthController extends Controller
             'message' => 'Login successful.',
             'data' => [
                 'user' => new UserResource($user),
+                'role' => $user->role, // 👈 role frontend ko mil jayega
                 'token' => $token,
                 'token_type' => 'Bearer',
             ],
@@ -78,8 +79,6 @@ class AuthController extends Controller
             'data' => new UserResource($user),
         ]);
     }
-
-
 
     public function update(Request $request)
     {

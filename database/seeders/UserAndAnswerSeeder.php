@@ -3,9 +3,8 @@
 namespace Database\Seeders;
 
 use App\Models\User;
-use App\Models\UserAnswer;
-use App\Models\Question;
 use App\Models\UserImage;
+use App\Models\UserVideo;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
@@ -13,16 +12,14 @@ class UserAndAnswerSeeder extends Seeder
 {
     public function run(): void
     {
-        // Pehle questions fetch karo
-        $questions = Question::all()->keyBy('key');
-
-        // Fake users with profile details from user table
+        // Fake users with profile details from user table and public profile_type
         $users = [
             [
                 'name' => 'Test User 1',
                 'email' => 'user1@example.com',
                 'password' => Hash::make('password'),
                 'role' => 'user',
+                'profile_type' => 'public',
                 'bio' => 'Love adventures and books!',
                 'age' => 25,
                 'location' => 'New York',
@@ -37,6 +34,7 @@ class UserAndAnswerSeeder extends Seeder
                 'email' => 'user2@example.com',
                 'password' => Hash::make('password'),
                 'role' => 'user',
+                'profile_type' => 'public',
                 'bio' => 'Bookworm and music lover.',
                 'age' => 27,
                 'location' => 'New York',
@@ -51,6 +49,7 @@ class UserAndAnswerSeeder extends Seeder
                 'email' => 'user3@example.com',
                 'password' => Hash::make('password'),
                 'role' => 'user',
+                'profile_type' => 'public',
                 'bio' => fake()->sentence(5),
                 'age' => rand(20, 40),
                 'location' => fake()->city(),
@@ -65,6 +64,7 @@ class UserAndAnswerSeeder extends Seeder
                 'email' => 'user4@example.com',
                 'password' => Hash::make('password'),
                 'role' => 'user',
+                'profile_type' => 'public',
                 'bio' => fake()->sentence(5),
                 'age' => rand(20, 40),
                 'location' => fake()->city(),
@@ -79,6 +79,7 @@ class UserAndAnswerSeeder extends Seeder
                 'email' => 'user5@example.com',
                 'password' => Hash::make('password'),
                 'role' => 'user',
+                'profile_type' => 'public',
                 'bio' => fake()->sentence(5),
                 'age' => rand(20, 40),
                 'location' => fake()->city(),
@@ -90,111 +91,29 @@ class UserAndAnswerSeeder extends Seeder
             ],
         ];
 
-        // Specific answers for Test User 1 and Test User 2 to ensure high compatibility
-        $specificAnswers = [
-            2 => [ // Test User 1 (ID 2)
-                'fullName' => 'John Doe',
-                'dateOfBirth' => '1998-05-15',
-                'gender' => 'Male',
-                'occupation' => 'Software Engineer',
-                'salaryRange' => '$150k+',
-                'workSchedule' => '9-5 weekdays',
-                'hobbies' => ['Reading', 'Travel', 'Fitness'],
-                'weekendActivities' => 'Hiking and reading',
-                'physicalAttraction' => '8',
-                'fitnessLevel' => '7',
-                'lookingFor' => 'Long-term relationship',
-                'preferredAge' => '22-30',
-                'dealBreakers' => 'Dishonesty',
-                'dealMakers' => 'Kindness',
-                'exclusivitySpeed' => 'Moderate (6-10 dates)',
-                'coreValues' => ['Honesty', 'Family'],
-                'loveLanguage' => 'Quality Time',
-                'conflictResolution' => 'Direct discussion',
-                'longTermGoals' => 'Build a family',
-                'idealRelationship' => 'Supportive partnership',
-                'hasChildren' => 'false',
-                'wantsChildren' => 'Yes, definitely',
-                'datingWithKids' => 'true',
-                'religion' => 'None',
-                'religionImportance' => '2',
-                'smoking' => 'Never',
-                'drinking' => 'Socially',
-                'pets' => 'Dog',
-            ],
-            3 => [ // Test User 2 (ID 3, almost identical answers)
-                'fullName' => 'Jane Smith',
-                'dateOfBirth' => '1996-03-22',
-                'gender' => 'Female',
-                'occupation' => 'Designer',
-                'salaryRange' => '$150k+', // Same as User 1
-                'workSchedule' => '9-5 weekdays', // Same
-                'hobbies' => ['Reading', 'Travel', 'Fitness'], // Same
-                'weekendActivities' => 'Hiking and reading', // Same
-                'physicalAttraction' => '8', // Same
-                'fitnessLevel' => '7', // Same
-                'lookingFor' => 'Long-term relationship', // Same
-                'preferredAge' => '22-30', // Same
-                'dealBreakers' => 'Dishonesty', // Same
-                'dealMakers' => 'Kindness', // Same
-                'exclusivitySpeed' => 'Moderate (6-10 dates)', // Same
-                'coreValues' => ['Honesty', 'Family'], // Same
-                'loveLanguage' => 'Quality Time', // Same
-                'conflictResolution' => 'Direct discussion', // Same
-                'longTermGoals' => 'Build a family', // Same
-                'idealRelationship' => 'Supportive partnership', // Same
-                'hasChildren' => 'false', // Same
-                'wantsChildren' => 'Yes, definitely', // Same
-                'datingWithKids' => 'true', // Same
-                'religion' => 'None', // Same
-                'religionImportance' => '2', // Same
-                'smoking' => 'Never', // Same
-                'drinking' => 'Socially', // Same
-                'pets' => 'Dog', // Same
-            ],
-        ];
-
-        foreach ($users as $index => $userData) {
+        foreach ($users as $userData) {
             $user = User::create($userData);
             $userId = $user->id;
 
-            foreach ($questions as $key => $question) {
-                $answer = isset($specificAnswers[$userId][$key])
-                    ? $specificAnswers[$userId][$key]
-                    : $this->generateFakeAnswer($question->type, $question->options);
-
-                UserAnswer::create([
+            // Add fake images (1-3 images per user)
+            $imageCount = rand(1, 3);
+            for ($i = 0; $i < $imageCount; $i++) {
+                UserImage::create([
                     'user_id' => $userId,
-                    'question_id' => $question->id,
-                    'answer' => is_array($answer) ? json_encode($answer) : $answer,
+                    'image_path' => "/storage/images/user_{$userId}/image{$i}.jpg",
+                    'is_primary' => $i === 0,
+                    'order' => $i,
                 ]);
             }
 
-            // Add fake image
-            UserImage::create([
+            // Add fake video (1 video per user for public profile requirement)
+            UserVideo::create([
                 'user_id' => $userId,
-                'image_path' => '/storage/profile_images/user' . $userId . '.jpg',
-                'is_primary' => true,
-                'order' => 0,
+                'video_path' => "/storage/videos/user_{$userId}/video.mp4",
+                'original_name' => 'video.mp4',
+                'mime_type' => 'video/mp4',
+                'size' => rand(5000000, 10000000),
             ]);
-        }
-    }
-
-    private function generateFakeAnswer($type, $options)
-    {
-        switch ($type) {
-            case 'text':
-                return fake()->sentence(3);
-            case 'select':
-                return $options ? fake()->randomElement($options) : 'Default';
-            case 'multiselect':
-                return $options ? fake()->randomElements($options, rand(1, 3)) : [];
-            case 'scale':
-                return rand(1, 10);
-            case 'boolean':
-                return fake()->boolean() ? 'true' : 'false';
-            default:
-                return 'N/A';
         }
     }
 }

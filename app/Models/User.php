@@ -49,4 +49,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\UserAnswer::class);
     }
+    public function events()
+    {
+        return $this->hasMany(Event::class, 'organizer_id');
+    }
+    public function videos()
+    {
+        return $this->hasMany(\App\Models\UserVideo::class);
+    }
 }

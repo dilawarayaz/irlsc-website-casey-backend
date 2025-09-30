@@ -3,18 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreProfileRequest;
+use App\Http\Requests\UploadVideoRequest;
+use App\Http\Resources\UserResource;
 use App\Models\Question;
 use App\Models\UserAnswer;
-use App\Models\Profile; // Optional, only if you still use profiles table
+use App\Models\Profile;
+use App\Models\User;
 use App\Models\UserImage;
+use App\Models\UserVideo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
-class ProfileController extends Controller
 
+class ProfileController extends Controller
 {
     public function store(StoreProfileRequest $request): JsonResponse
     {
@@ -23,41 +27,34 @@ class ProfileController extends Controller
             $userId = $request->user()->id;
 
             // Optional: Update Profile table if you still use it
-            // Profile::updateOrCreate(['user_id' => $userId], []);
+            Profile::updateOrCreate(['user_id' => $userId], []);
 
             // Clear existing answers for this user to handle updates
             UserAnswer::where('user_id', $userId)->delete();
 
             // Save each answer based on question type
             foreach ($data as $key => $value) {
-                if($key == 'fullName'){
-                    Profile::where(
-                        'user_id', $userId
-                    )->update([
-                        'full_name'=> $value
-                    ]);
+                if ($key == 'fullName') {
+                    Profile::where('user_id', $userId)->update(['full_name' => $value]);
                 }
-                // dd($value);
                 $question = Question::where('key', $key)->first();
-                // dd($question);
-                   if ($question) {
-        UserAnswer::updateOrCreate(
-            [
-                'user_id' => $userId,
-                'question_id' => $question->id,
-            ],
-            [
-                'answer' => is_array($value) ? json_encode($value) : $value,
-            ]
-        );
-    }
-
+                if ($question) {
+                    UserAnswer::updateOrCreate(
+                        [
+                            'user_id' => $userId,
+                            'question_id' => $question->id,
+                        ],
+                        [
+                            'answer' => is_array($value) ? json_encode($value) : $value,
+                        ]
+                    );
+                }
             }
 
             return response()->json([
                 'success' => true,
                 'message' => 'Profile saved successfully.',
-                'data' => $data, // Return submitted data for confirmation
+                'data' => $data,
             ], 200);
         } catch (\Exception $e) {
             Log::error('Profile save error: ' . $e->getMessage());
@@ -83,21 +80,19 @@ class ProfileController extends Controller
             ], 404);
         }
 
-        // Map answers to {key: value} with correct type
         $profileData = $answers->mapWithKeys(function ($answer) {
             $question = $answer->question;
-            // Safe JSON decode
-    $decodedValue = json_decode($answer->answer, true);
-    $value = (json_last_error() === JSON_ERROR_NONE) ? $decodedValue : $answer->answer;
+            $decodedValue = json_decode($answer->answer, true);
+            $value = (json_last_error() === JSON_ERROR_NONE) ? $decodedValue : $answer->answer;
 
-    $convertedValue = match ($question->type) {
-        'scale'      => (int) $value,
-        'boolean'    => (bool) $value,
-        'multiselect'=> (array) $value,
-        'text', 
-        'select'     => (string) $value,
-        default      => $value,
-    };
+            $convertedValue = match ($question->type) {
+                'scale'      => (int) $value,
+                'boolean'    => (bool) $value,
+                'multiselect' => (array) $value,
+                'text',
+                'select'     => (string) $value,
+                default      => $value,
+            };
             return [$question->key => $convertedValue];
         });
 
@@ -107,9 +102,8 @@ class ProfileController extends Controller
         ]);
     }
 
-   public function update(Request $request): JsonResponse
+    public function update(Request $request): JsonResponse
     {
-        // Updated without images
         try {
             $validated = $request->validate([
                 'name' => 'sometimes|string|max:255',
@@ -164,122 +158,209 @@ class ProfileController extends Controller
         }
     }
 
-    public function updateImages(Request $request): JsonResponse
+    public function uploadImages(Request $request): JsonResponse
     {
         try {
-            // Production-level validation
+            $user = $request->user();
+
             $validated = $request->validate([
-                'images.*' => [
-                    'sometimes',
-                    'file',
-                    'image',
-                    'mimes:jpeg,png,jpg,gif',
-                    'max:2048', // 2MB max per image
-                    Rule::dimensions()->maxWidth(2000)->maxHeight(2000), // Prevent very large images
-                ],
-                'existing_images' => 'sometimes|array|max:6', // Max 6 images total
-                'existing_images.*' => 'string|url', // Validate existing as URLs
-                'deleted_images' => 'sometimes|array', // Array of URLs to delete
-                'deleted_images.*' => 'string|url',
-                'primary_image' => 'sometimes|string|url', // URL of the primary image
+                'images'   => 'required|array',
+                'images.*' => 'required|file|image|max:2048',
             ]);
 
-            $userId = $request->user()->id;
-            $maxImages = 6; // Business rule: max 6 images per user
+            $uploadedImages = [];
 
-            // Get current images from DB
-            $currentImages = UserImage::where('user_id', $userId)
-                ->orderBy('order')
-                ->get();
-
-            // Handle deletions
-            if (isset($validated['deleted_images'])) {
-                foreach ($validated['deleted_images'] as $deletedUrl) {
-                    $image = $currentImages->firstWhere('image_path', $deletedUrl);
-                    if ($image) {
-                        // Delete file from storage
-                        $path = str_replace('/storage/', '', parse_url($deletedUrl, PHP_URL_PATH));
-                        Storage::disk('public')->delete($path);
-                        $image->delete();
-                    }
-                }
-                // Refresh current images after deletion
-                $currentImages = UserImage::where('user_id', $userId)
-                    ->orderBy('order')
-                    ->get();
-            }
-
-            // Prepare existing images
-            $images = [];
-            if (isset($validated['existing_images'])) {
-                $images = $validated['existing_images'];
-            }
-
-            // Upload new images
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $file) {
                     if ($file->isValid()) {
-                        // Generate unique filename
-                        $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
-                        $path = $file->storeAs('profile_images', $filename, 'public');
-                        $url = Storage::url($path);
-                        $images[] = $url;
+                        $originalName = $file->getClientOriginalName();
+                        $mime = $file->getClientMimeType();
+                        $size = $file->getSize();
+
+                        $path = $file->store("images/user_{$user->id}", 'public');
+
+                        $image = UserImage::create([
+                            'user_id'     => $user->id,
+                            'image_path'  => $path,
+                            'original_name' => $originalName,
+                            'mime_type'   => $mime,
+                            'size'        => $size,
+                        ]);
+
+                        $uploadedImages[] = [
+                            'id'        => $image->id,
+                            'url'       => Storage::disk('public')->url($path),
+                            'name'      => $originalName,
+                            'mime_type' => $mime,
+                            'size'      => $size,
+                        ];
                     }
-                }
-            }
-
-            // Enforce max images
-            if (count($images) > $maxImages) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "You can upload a maximum of $maxImages images.",
-                ], 422);
-            }
-
-            // Clear existing DB images and re-insert
-            UserImage::where('user_id', $userId)->delete();
-
-            // Insert new/updated images
-            foreach ($images as $order => $imagePath) {
-                $isPrimary = (isset($validated['primary_image']) && $validated['primary_image'] === $imagePath);
-                UserImage::create([
-                    'user_id' => $userId,
-                    'image_path' => $imagePath,
-                    'is_primary' => $isPrimary,
-                    'order' => $order,
-                ]);
-            }
-
-            // If no primary specified and images exist, set first as primary
-            if (!isset($validated['primary_image']) && !empty($images)) {
-                $firstImage = UserImage::where('user_id', $userId)->first();
-                if ($firstImage) {
-                    $firstImage->is_primary = true;
-                    $firstImage->save();
                 }
             }
 
             return response()->json([
                 'success' => true,
-                'message' => 'Profile images updated successfully.',
-                'data' => [
-                    'images' => $images,
-                    'primary' => $validated['primary_image'] ?? $images[0] ?? null,
-                ],
-            ], 200);
+                'message' => 'Images uploaded successfully.',
+                'data'    => $uploadedImages,
+            ], 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json([
                 'success' => false,
                 'message' => 'Validation failed.',
-                'errors' => $e->errors(),
+                'errors'  => $e->errors(),
             ], 422);
         } catch (\Exception $e) {
-            Log::error('Image update error: ' . $e->getMessage());
+            Log::error('Image upload error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to update images.',
+                'message' => 'Failed to upload images.',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function uploadVideo(UploadVideoRequest $request)
+    {
+        try {
+            $user = $request->user();
+            $file = $request->file('video');
+            $originalName = $file->getClientOriginalName();
+            $mime = $file->getClientMimeType();
+            $size = $file->getSize();
+
+            $path = $file->store("videos/user_{$user->id}", 'public');
+
+            $video = UserVideo::create([
+                'user_id' => $user->id,
+                'video_path' => $path,
+                'original_name' => $originalName,
+                'mime_type' => $mime,
+                'size' => $size,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Video uploaded successfully.',
+                'data' => $video,
+                'video_url' => Storage::disk('public')->url($path),
+            ], 201);
+        } catch (\Exception $e) {
+            Log::error('Video upload error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to upload video.',
                 'error' => $e->getMessage(),
             ], 500);
         }
     }
+
+    public function toggleProfileType(Request $request)
+    {
+        $user = $request->user();
+        $action = $request->input('action');
+
+        if (!in_array($action, ['make_public', 'make_private'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid action. Use make_public or make_private.'
+            ], 422);
+        }
+
+        if ($action === 'make_public') {
+            $hasImage = \DB::table('user_images')->where('user_id', $user->id)->exists();
+            $hasVideo = \DB::table('user_videos')->where('user_id', $user->id)->exists();
+
+            if (!$hasImage || !$hasVideo) {
+                $missing = [];
+                if (!$hasImage) $missing[] = 'images';
+                if (!$hasVideo) $missing[] = 'video';
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Cannot make profile public. Please upload: ' . implode(', ', $missing),
+                ], 400);
+            }
+
+            $user->profile_type = 'public';
+            $user->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile is now public.',
+                'data' => ['profile_type' => $user->profile_type],
+            ]);
+        }
+
+        $user->profile_type = 'private';
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile is now private.',
+            'data' => ['profile_type' => $user->profile_type],
+        ]);
+    }
+
+    public function listVideos(Request $request)
+    {
+        $videos = $request->user()->videos()->get()->map(function ($v) {
+            return [
+                'id' => $v->id,
+                'video_url' => Storage::disk('public')->url($v->video_path),
+                'original_name' => $v->original_name,
+                'mime_type' => $v->mime_type,
+                'size' => $v->size,
+                'created_at' => $v->created_at,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => $videos,
+        ]);
+    }
+
+    public function getPublicProfiles(Request $request)
+    {
+        try {
+            // Load videos along with answers and images
+            $publicUsers = User::where('profile_type', 'public')
+                ->with(['answers.question', 'images', 'videos']) // Added videos relation
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Public profiles fetched successfully.',
+                'data' => UserResource::collection($publicUsers),
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Public profiles fetch error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch public profiles.',
+            ], 500);
+        }
+    }
+
+    public function getPrivateProfiles(Request $request)
+{
+    try {
+        // Load videos along with answers and images
+        $privateUsers = User::where('profile_type', 'private')
+            ->with(['answers.question', 'images', 'videos']) // Added videos relation
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Private profiles fetched successfully.',
+            'data' => UserResource::collection($privateUsers),
+        ], 200);
+    } catch (\Exception $e) {
+        Log::error('Private profiles fetch error: ' . $e->getMessage());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch private profiles.',
+        ], 500);
+    }
+}
+
 }
