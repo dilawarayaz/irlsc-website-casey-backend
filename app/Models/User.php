@@ -24,6 +24,8 @@ class User extends Authenticatable
         'interests',
         'looking_for',
         'relationship_goals',
+        'profile_type',
+        'profile_picture',
     ];
 
     protected $hidden = [
@@ -48,5 +50,13 @@ class User extends Authenticatable
     public function answers()
     {
         return $this->hasMany(\App\Models\UserAnswer::class);
+    }
+    public function events()
+    {
+        return $this->hasMany(Event::class, 'organizer_id');
+    }
+    public function videos()
+    {
+        return $this->hasMany(\App\Models\UserVideo::class);
     }
 }

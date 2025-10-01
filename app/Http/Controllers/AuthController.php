@@ -8,6 +8,7 @@ use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -63,11 +64,41 @@ class AuthController extends Controller
             'message' => 'Login successful.',
             'data' => [
                 'user' => new UserResource($user),
+                'role' => $user->role, // 👈 role frontend ko mil jayega
                 'token' => $token,
                 'token_type' => 'Bearer',
             ],
         ]);
     }
+
+    public function updateProfilePicture(Request $request)
+    {
+        $request->validate([
+            'profile_picture' => 'required|image', // <-- removed mimes and size for testing
+        ]);
+
+        $user = $request->user();
+
+        // Purani file delete (agar hai)
+        if ($user->profile_picture) {
+            Storage::disk('public')->delete($user->profile_picture);
+        }
+
+        // New file upload
+        $path = $request->file('profile_picture')->store('profile_pictures', 'public');
+
+        // Save in DB
+        $user->update([
+            'profile_picture' => $path,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile picture updated successfully.',
+            'data' => new UserResource($user), // ✅ return updated user
+        ]);
+    }
+
 
     public function show(Request $request)
     {
@@ -78,8 +109,6 @@ class AuthController extends Controller
             'data' => new UserResource($user),
         ]);
     }
-
-
 
     public function update(Request $request)
     {

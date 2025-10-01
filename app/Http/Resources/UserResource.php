@@ -23,12 +23,25 @@ class UserResource extends JsonResource
             'interests' => json_decode($this->interests ?? '[]', true),
             'looking_for' => $this->looking_for,
             'relationship_goals' => $this->relationship_goals,
-
+            'role' => $this->role,
+            'profile_type' => $this->profile_type,
+            'profile_picture' => $this->makeImageUrl($this->profile_picture),
             // Images
             'images' => $this->images->map(function ($image) {
                 return [
                     'id' => $image->id,
                     'url' => $this->makeImageUrl($image->image_path),
+                ];
+            }),
+
+            // Videos
+            'videos' => $this->videos->map(function ($video) {
+                return [
+                    'id' => $video->id,
+                    'url' => $this->makeImageUrl($video->video_path), // Reusing makeImageUrl for videos
+                    'original_name' => $video->original_name,
+                    'mime_type' => $video->mime_type,
+                    'size' => $video->size,
                 ];
             }),
 
@@ -43,7 +56,7 @@ class UserResource extends JsonResource
                 ];
             }),
 
-            // NEW: Matches count
+            // Matches count
             'matches_count' => $this->calculateMatchesCount(),
 
             // Meta
@@ -66,9 +79,6 @@ class UserResource extends JsonResource
         return asset('storage/' . $path);
     }
 
-    /**
-     * Count how many users match with this user based on interests
-     */
     private function calculateMatchesCount()
     {
         $userInterests = json_decode($this->interests ?? '[]', true);
