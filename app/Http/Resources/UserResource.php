@@ -25,6 +25,7 @@ class UserResource extends JsonResource
             'relationship_goals' => $this->relationship_goals,
             'role' => $this->role,
             'profile_type' => $this->profile_type,
+            'profile_picture' => $this->makeImageUrl($this->profile_picture),
             // Images
             'images' => $this->images->map(function ($image) {
                 return [

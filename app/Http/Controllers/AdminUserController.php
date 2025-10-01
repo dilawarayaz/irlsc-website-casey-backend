@@ -14,7 +14,9 @@ class AdminUserController extends Controller
      */
     public function index(Request $request)
     {
-        $users = User::where('role','user')->with(['images'])
+        $users = User::where('role', 'user')
+            ->whereHas('videos') // sirf un users ko lana jinki videos hain
+            ->with(['images', 'videos']) // images + videos dono lana
             ->latest()
             ->get();
 
@@ -23,6 +25,7 @@ class AdminUserController extends Controller
             'data' => $users,
         ]);
     }
+
 
     /**
      * Get single user profile (admin view)

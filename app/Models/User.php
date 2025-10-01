@@ -24,6 +24,8 @@ class User extends Authenticatable
         'interests',
         'looking_for',
         'relationship_goals',
+        'profile_type',
+        'profile_picture',
     ];
 
     protected $hidden = [

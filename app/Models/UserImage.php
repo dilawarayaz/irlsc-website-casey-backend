@@ -17,7 +17,7 @@ class UserImage extends Model
         'order',
     ];
 
-    protected $appends = ['image_url']; // <-- frontend ko extra field milegi
+    protected $appends = ['image_url'];
 
     public function user()
     {

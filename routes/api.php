@@ -23,13 +23,14 @@ Route::get('profiles/private', [ProfileController::class, 'getPrivateProfiles'])
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Route::get('user/profile', [UserProfileController::class, 'show']);
+     Route::post('/user/profile-picture', [AuthController::class, 'updateProfilePicture']);
     Route::post('/upload-video', [ProfileController::class, 'uploadVideo']);
     Route::post('profile/public/images', [ProfileController::class, 'uploadImages']);
     Route::post('/toggle-profile-type', [ProfileController::class, 'toggleProfileType']);
     Route::get('/my-videos', [ProfileController::class, 'listVideos']);
     Route::post('profile/update', [AuthController::class, 'update']);
     Route::post('profile/images', [UserImageController::class, 'store']);
-    Route::delete('/images/{id}', [UserImageController::class, 'destroy']);
+    Route::delete('profile/images/{id}', [UserImageController::class, 'destroy']);
     Route::get('/user', [AuthController::class, 'show']);
     Route::post('/logout', [AuthController::class, 'logout']);
 

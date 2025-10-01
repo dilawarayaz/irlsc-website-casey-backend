@@ -10,24 +10,32 @@ class UserImageController extends Controller
 {
     // Upload new image
     public function store(Request $request)
-    {
-        $request->validate([
-            'image' => 'required|image|max:2048', // max 2MB
-        ]);
+{
+    $request->validate([
+        'images'   => 'required|array',
+        'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+    ]);
 
-        $path = $request->file('image')->store('user_images', 'public');
+    $uploadedImages = [];
+
+    foreach ($request->file('images') as $img) {
+        $path = $img->store('user_images', 'public');
 
         $image = UserImage::create([
-            'user_id' => $request->user()->id,
+            'user_id'    => $request->user()->id,
             'image_path' => $path,
         ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Image uploaded successfully.',
-            'data' => $image,
-        ]);
+        $uploadedImages[] = $image;
     }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Images uploaded successfully.',
+        'data'    => $uploadedImages,
+    ]);
+}
+
 
     // Delete image
     public function destroy(Request $request, $id)
