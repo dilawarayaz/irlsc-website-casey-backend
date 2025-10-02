@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ManualMatch;
 use App\Models\User;
 use App\Models\UserImage;
 use App\Models\UserVideo;
@@ -11,118 +12,139 @@ use Illuminate\Support\Facades\Log;
 class MatchController extends Controller
 {
     public function index(Request $request)
-    {
-        try {
-            $currentUser = $request->user();
-            $currentUserId = $currentUser->id;
+{
+    try {
+        $currentUser = $request->user();
+        $currentUserId = $currentUser->id;
 
-            // Fetch current user's profile details from user table
-            $currentInterests = json_decode($currentUser->interests ?? '[]', true);
-            $currentPreferences = [
-                'looking_for' => $currentUser->looking_for ?? '',
-                'relationship_goals' => $currentUser->relationship_goals ?? '',
+        // Current user profile details
+        $currentInterests = json_decode($currentUser->interests ?? '[]', true);
+        $currentPreferences = [
+            'looking_for' => $currentUser->looking_for ?? '',
+            'relationship_goals' => $currentUser->relationship_goals ?? '',
+        ];
+        $currentProfile = [
+            'age' => (int) ($currentUser->age ?? 0),
+            'location' => $currentUser->location ?? '',
+            'occupation' => $currentUser->occupation ?? '',
+            'education' => $currentUser->education ?? '',
+        ];
+
+        // Media counts for current user
+        $currentImageCount = UserImage::where('user_id', $currentUserId)->count();
+        $currentVideoCount = UserVideo::where('user_id', $currentUserId)->count();
+        $currentMedia = [
+            'has_images' => $currentImageCount > 0,
+            'has_videos' => $currentVideoCount > 0,
+            'image_count' => $currentImageCount,
+            'video_count' => $currentVideoCount,
+        ];
+
+        $matches = [];
+
+        // ✅ 1. Manual Matches First
+        $manualMatches = ManualMatch::where('user_id_1', $currentUserId)
+            ->orWhere('user_id_2', $currentUserId)
+            ->get();
+
+        foreach ($manualMatches as $manual) {
+            $otherId = ($manual->user_id_1 == $currentUserId) ? $manual->user_id_2 : $manual->user_id_1;
+            $otherUser = User::with(['images', 'videos'])->find($otherId);
+
+            if (!$otherUser) continue;
+
+            $matches[] = [
+                'id' => $otherUser->id,
+                'name' => $otherUser->name,
+                'age' => $otherUser->age ?? 'N/A',
+                'location' => $otherUser->location ?? 'N/A',
+                'bio' => $otherUser->bio ?? '',
+                'images' => $otherUser->images->pluck('image_path')->toArray() ?: ['/placeholder.svg'],
+                'videos' => $otherUser->videos->pluck('video_path')->toArray() ?: [],
+                'compatibility' => $manual->compatibility ?? 100, // Manual score
+                'isOnline' => false,
+                'is_manual' => true, // flag to differentiate
             ];
-            $currentProfile = [
-                'age' => (int) ($currentUser->age ?? 0),
-                'location' => $currentUser->location ?? '',
-                'occupation' => $currentUser->occupation ?? '',
-                'education' => $currentUser->education ?? '',
-            ];
+        }
 
-            // Fetch media counts for current user (optional for scoring)
-            $currentImageCount = UserImage::where('user_id', $currentUserId)->count();
-            $currentVideoCount = UserVideo::where('user_id', $currentUserId)->count();
-            $currentMedia = [
-                'has_images' => $currentImageCount > 0,
-                'has_videos' => $currentVideoCount > 0,
-                'image_count' => $currentImageCount,
-                'video_count' => $currentVideoCount,
-            ];
+        // ✅ 2. Automatic Matches
+        $otherUsers = User::where('id', '!=', $currentUserId)
+            ->where('profile_type', 'public')
+            ->get();
 
-            // Fetch all other public users
-            $otherUsers = User::where('id', '!=', $currentUserId)
-                ->where('profile_type', 'public')
-                ->get();
-
-            $matches = [];
-            foreach ($otherUsers as $otherUser) {
-                // Fetch images from UserImage
-                $images = UserImage::where('user_id', $otherUser->id)
-                    ->pluck('image_path')
-                    ->toArray();
-
-                // Fetch videos from UserVideo
-                $videos = UserVideo::where('user_id', $otherUser->id)
-                    ->pluck('video_path')
-                    ->toArray();
-
-                // Fetch other user's profile from user table
-                $otherInterests = json_decode($otherUser->interests ?? '[]', true);
-                $otherPreferences = [
-                    'looking_for' => $otherUser->looking_for ?? '',
-                    'relationship_goals' => $otherUser->relationship_goals ?? '',
-                ];
-                $otherProfile = [
-                    'age' => (int) ($otherUser->age ?? 0),
-                    'location' => $otherUser->location ?? '',
-                    'occupation' => $otherUser->occupation ?? '',
-                    'education' => $otherUser->education ?? '',
-                ];
-
-                // Fetch media for other user
-                $otherImageCount = UserImage::where('user_id', $otherUser->id)->count();
-                $otherVideoCount = UserVideo::where('user_id', $otherUser->id)->count();
-                $otherMedia = [
-                    'has_images' => $otherImageCount > 0,
-                    'has_videos' => $otherVideoCount > 0,
-                    'image_count' => $otherImageCount,
-                    'video_count' => $otherVideoCount,
-                ];
-
-                // Calculate scores (skipped questions, focused on user table and media)
-                $interestsScore = $this->calculateInterestsScore($currentInterests, $otherInterests);
-                $preferencesScore = $this->calculatePreferencesScore($currentPreferences, $otherPreferences);
-                $profileScore = $this->calculateProfileScore($currentProfile, $otherProfile);
-                $mediaScore = $this->calculateMediaScore($currentMedia, $otherMedia);
-
-                $totalScore = (
-                    $interestsScore * 0.3 +
-                    $preferencesScore * 0.3 +
-                    $profileScore * 0.3 +
-                    $mediaScore * 0.1
-                );
-
-                $matches[] = [
-                    'id' => $otherUser->id,
-                    'name' => $otherUser->name,
-                    'age' => $otherUser->age ?? 'N/A',
-                    'location' => $otherUser->location ?? 'N/A',
-                    'bio' => $otherUser->bio ?? '',
-                    'images' => $images ?: ['/placeholder.svg'],
-                    'videos' => $videos ?: [], // Added videos
-                    'compatibility' => round($totalScore),
-                    'isOnline' => false,
-                ];
+        foreach ($otherUsers as $otherUser) {
+            // Skip if already in manual matches
+            if (collect($matches)->pluck('id')->contains($otherUser->id)) {
+                continue;
             }
 
-            // Sort by compatibility descending
-            usort($matches, function($a, $b) {
-                return $b['compatibility'] <=> $a['compatibility'];
-            });
+            $images = UserImage::where('user_id', $otherUser->id)->pluck('image_path')->toArray();
+            $videos = UserVideo::where('user_id', $otherUser->id)->pluck('video_path')->toArray();
 
-            return response()->json([
-                'success' => true,
-                'data' => $matches,
-            ]);
-        } catch (\Exception $e) {
-            Log::error('Match error: ' . $e->getMessage() . ' | File: ' . $e->getFile() . ' | Line: ' . $e->getLine());
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch matches.',
-                'error' => $e->getMessage(),
-            ], 500);
+            $otherInterests = json_decode($otherUser->interests ?? '[]', true);
+            $otherPreferences = [
+                'looking_for' => $otherUser->looking_for ?? '',
+                'relationship_goals' => $otherUser->relationship_goals ?? '',
+            ];
+            $otherProfile = [
+                'age' => (int) ($otherUser->age ?? 0),
+                'location' => $otherUser->location ?? '',
+                'occupation' => $otherUser->occupation ?? '',
+                'education' => $otherUser->education ?? '',
+            ];
+
+            $otherImageCount = UserImage::where('user_id', $otherUser->id)->count();
+            $otherVideoCount = UserVideo::where('user_id', $otherUser->id)->count();
+            $otherMedia = [
+                'has_images' => $otherImageCount > 0,
+                'has_videos' => $otherVideoCount > 0,
+                'image_count' => $otherImageCount,
+                'video_count' => $otherVideoCount,
+            ];
+
+            $interestsScore = $this->calculateInterestsScore($currentInterests, $otherInterests);
+            $preferencesScore = $this->calculatePreferencesScore($currentPreferences, $otherPreferences);
+            $profileScore = $this->calculateProfileScore($currentProfile, $otherProfile);
+            $mediaScore = $this->calculateMediaScore($currentMedia, $otherMedia);
+
+            $totalScore = (
+                $interestsScore * 0.3 +
+                $preferencesScore * 0.3 +
+                $profileScore * 0.3 +
+                $mediaScore * 0.1
+            );
+
+            $matches[] = [
+                'id' => $otherUser->id,
+                'name' => $otherUser->name,
+                'age' => $otherUser->age ?? 'N/A',
+                'location' => $otherUser->location ?? 'N/A',
+                'bio' => $otherUser->bio ?? '',
+                'images' => $images ?: ['/placeholder.svg'],
+                'videos' => $videos ?: [],
+                'compatibility' => round($totalScore),
+                'isOnline' => false,
+                'is_manual' => false,
+            ];
         }
+
+        // ✅ Sort by compatibility desc
+        usort($matches, fn($a, $b) => $b['compatibility'] <=> $a['compatibility']);
+
+        return response()->json([
+            'success' => true,
+            'data' => $matches,
+        ]);
+    } catch (\Exception $e) {
+        Log::error('Match error: ' . $e->getMessage() . ' | File: ' . $e->getFile() . ' | Line: ' . $e->getLine());
+        return response()->json([
+            'success' => false,
+            'message' => 'Failed to fetch matches.',
+            'error' => $e->getMessage(),
+        ], 500);
     }
+}
+
 
     private function calculateInterestsScore($curr, $other)
     {

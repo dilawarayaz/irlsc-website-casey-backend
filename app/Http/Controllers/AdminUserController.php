@@ -15,8 +15,7 @@ class AdminUserController extends Controller
     public function index(Request $request)
     {
         $users = User::where('role', 'user')
-            ->whereHas('videos') // sirf un users ko lana jinki videos hain
-            ->with(['images', 'videos']) // images + videos dono lana
+            ->with(['images', 'videos']) 
             ->latest()
             ->get();
 
