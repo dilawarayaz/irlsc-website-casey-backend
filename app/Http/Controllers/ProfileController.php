@@ -157,6 +157,8 @@ class ProfileController extends Controller
             ], 500);
         }
     }
+    
+    
     public function uploadImages(Request $request): JsonResponse
     {
         try {
