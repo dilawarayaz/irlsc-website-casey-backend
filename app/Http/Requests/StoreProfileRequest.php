@@ -28,7 +28,7 @@ class StoreProfileRequest extends FormRequest
                     if ($field === 'dateOfBirth') {
                         $rules[$field] = $required_str . '|date|date_format:Y-m-d';
                     } else {
-                        $rules[$field] = $required_str . '|string|max:255';
+                        $rules[$field] = $required_str . '|string';
                     }
                     break;
                 case 'select':
