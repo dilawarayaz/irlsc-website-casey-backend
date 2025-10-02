@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Log;
 
 class MatchController extends Controller
 {
-    public function index(Request $request)
+public function index(Request $request)
 {
     try {
         $currentUser = $request->user();
@@ -53,6 +53,11 @@ class MatchController extends Controller
 
             if (!$otherUser) continue;
 
+            $compatibility = $manual->compatibility ?? 100;
+
+            // Skip agar compatibility < 50
+            if ($compatibility < 50) continue;
+
             $matches[] = [
                 'id' => $otherUser->id,
                 'name' => $otherUser->name,
@@ -61,7 +66,7 @@ class MatchController extends Controller
                 'bio' => $otherUser->bio ?? '',
                 'images' => $otherUser->images->pluck('image_path')->toArray() ?: ['/placeholder.svg'],
                 'videos' => $otherUser->videos->pluck('video_path')->toArray() ?: [],
-                'compatibility' => $manual->compatibility ?? 100, // Manual score
+                'compatibility' => $compatibility, // Manual score
                 'isOnline' => false,
                 'is_manual' => true, // flag to differentiate
             ];
@@ -114,6 +119,11 @@ class MatchController extends Controller
                 $mediaScore * 0.1
             );
 
+            $compatibility = round($totalScore);
+
+            // Skip agar compatibility < 50
+            if ($compatibility < 50) continue;
+
             $matches[] = [
                 'id' => $otherUser->id,
                 'name' => $otherUser->name,
@@ -122,7 +132,7 @@ class MatchController extends Controller
                 'bio' => $otherUser->bio ?? '',
                 'images' => $images ?: ['/placeholder.svg'],
                 'videos' => $videos ?: [],
-                'compatibility' => round($totalScore),
+                'compatibility' => $compatibility,
                 'isOnline' => false,
                 'is_manual' => false,
             ];
@@ -144,6 +154,7 @@ class MatchController extends Controller
         ], 500);
     }
 }
+
 
 
     private function calculateInterestsScore($curr, $other)
