@@ -59,4 +59,11 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\UserVideo::class);
     }
+    public function getProfilePictureAttribute($value)
+    {
+        if ($value) {
+            return asset('storage/' . $value);
+        }
+        return null;
+    }
 }
