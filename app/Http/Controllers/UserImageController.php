@@ -13,9 +13,10 @@ class UserImageController extends Controller
     {
         $request->validate([
             'images'   => 'required|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'images.*' => 'image',
         ]);
 
+        // Limit to 5 images per user
         $uploadedImages = [];
 
         foreach ($request->file('images') as $img) {

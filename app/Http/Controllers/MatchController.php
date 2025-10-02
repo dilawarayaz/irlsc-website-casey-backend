@@ -155,6 +155,7 @@ public function index(Request $request)
     }
 }
 
+ 
 
 
     private function calculateInterestsScore($curr, $other)

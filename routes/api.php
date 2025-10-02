@@ -20,6 +20,7 @@ Route::get('/users/{id}', [AdminUserController::class, 'show']);
 Route::get('profiles/public', [ProfileController::class, 'getPublicProfiles']);
 Route::get('profiles/private', [ProfileController::class, 'getPrivateProfiles']);
 
+// testing
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Route::get('user/profile', [UserProfileController::class, 'show']);
