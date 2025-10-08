@@ -9,23 +9,25 @@ class QuestionController extends Controller
 {
     // Public: Get all questions (for frontend)
     public function index()
-    {
-        $questions = Question::all()->map(function ($q) {
-            return [
-                'id' => $q->key, // Frontend expects 'id' as the key string
-                'category' => $q->category,
-                'question' => $q->question,
-                'type' => $q->type,
-                'required' => $q->required,
-                'options' => $q->options,
-            ];
-        });
+{
+    $questions = Question::all()->map(function ($q) {
+        return [
+            'id' => $q->id,          // ✅ real numeric id
+            'key' => $q->key,        // ✅ send key separately
+            'category' => $q->category,
+            'question' => $q->question,
+            'type' => $q->type,
+            'required' => $q->required,
+            'options' => $q->options,
+        ];
+    });
 
-        return response()->json([
-            'success' => true,
-            'data' => $questions,
-        ]);
-    }
+    return response()->json([
+        'success' => true,
+        'data' => $questions,
+    ]);
+}
+
 
     // Admin: Create new question
     public function store(Request $request)
