@@ -57,7 +57,7 @@ class QuestionController extends Controller
             'key' => 'string|unique:questions,key,' . $question->id,
             'category' => 'string',
             'question' => 'string',
-            'type' => 'in:text,select,multiselect,scale,boolean',
+            'type' => 'in:text,select,multiselect,scale,boolean,radio',
             'required' => 'boolean',
             'options' => 'nullable|array',
         ]);
