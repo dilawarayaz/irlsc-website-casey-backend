@@ -13,7 +13,7 @@ class UserImageController extends Controller
     {
         $request->validate([
             'images'   => 'required|array',
-            'images.*' => 'image',
+            // 'images.*' => 'image',
         ]);
 
         // Limit to 5 images per user
