@@ -37,6 +37,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Profile
     Route::post('/profile', [ProfileController::class, 'store']);
+    Route::post('/profile/update-password', [AuthController::class, 'updatePassword']);
     Route::get('/profile', [ProfileController::class, 'show']);
     // Questions (public fetch)
     Route::get('/questions', [QuestionController::class, 'index']);

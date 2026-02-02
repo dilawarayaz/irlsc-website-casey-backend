@@ -13,6 +13,40 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    
+    
+    
+     /**
+     * Update the authenticated user's password.
+     */
+    public function updatePassword(Request $request)
+    {
+        // Validate input fields
+        $request->validate([
+            'current_password' => 'required',
+            'newPassword' => 'required', // must include new_password_confirmation
+        ]);
+
+        // Get logged-in user
+        $user = auth()->user();
+
+        // Check if current password matches
+        if (!Hash::check($request->current_password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Current password is incorrect.',
+            ], 401);
+        }
+
+        // Update the password
+        $user->password = $request->newPassword;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password updated successfully.',
+        ]);
+    }
     public function register(RegisterRequest $request)
     {
         try {
