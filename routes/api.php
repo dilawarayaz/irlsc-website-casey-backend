@@ -15,6 +15,8 @@ use App\Http\Controllers\EventController;
 // Existing auth routes (assume you have them)
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
+Route::post('/forgot-password', [AuthController::class, 'forgotPassword']);
+
 Route::get('/getall-users', [AdminUserController::class, 'index']);
 Route::get('/users/{id}', [AdminUserController::class, 'show']);
 Route::get('profiles/public', [ProfileController::class, 'getPublicProfiles']);

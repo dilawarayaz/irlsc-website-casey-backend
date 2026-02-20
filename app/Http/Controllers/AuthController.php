@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+
 class AuthController extends Controller
 {
     
@@ -98,7 +101,7 @@ class AuthController extends Controller
             'message' => 'Login successful.',
             'data' => [
                 'user' => new UserResource($user),
-                'role' => $user->role, // 👈 role frontend ko mil jayega
+                'role' => $user->role, // ðŸ‘ˆ role frontend ko mil jayega
                 'token' => $token,
                 'token_type' => 'Bearer',
             ],
@@ -129,7 +132,7 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Profile picture updated successfully.',
-            'data' => new UserResource($user), // ✅ return updated user
+            'data' => new UserResource($user), // âœ… return updated user
         ]);
     }
 
@@ -182,4 +185,118 @@ class AuthController extends Controller
             'message' => 'Logged out successfully.',
         ]);
     }
+    
+    public function forgotPassword(Request $request)
+{
+    $request->validate([
+        'email' => 'required|email',
+    ]);
+
+    $user = User::where('email', $request->email)->first();
+
+    if (!$user) {
+        throw ValidationException::withMessages([
+            'email' => ['No account found with this email address.'],
+        ]);
+    }
+
+    // Generate 6 digit OTP
+    $otp = rand(100000, 999999);
+
+    // Delete old OTPs
+    DB::table('password_reset_tokens')
+        ->where('email', $request->email)
+        ->delete();
+
+    // Save hashed OTP
+    DB::table('password_reset_tokens')->insert([
+        'email' => $request->email,
+        'token' => Hash::make($otp),
+    ]);
+
+    // 🔜 Replace with real mail later
+    // Mail::to($request->email)->send(new PasswordResetOtpMail($otp));
+
+    return response()->json([
+        'success' => true,
+        'message' => 'OTP sent to your email address.',
+        // REMOVE THIS IN PRODUCTION 👇
+        'otp' => $otp,
+    ]);
+}
+
+
+public function verifyOtp(Request $request)
+{
+    $request->validate([
+        'email' => 'required|email',
+        'otp' => 'required|string',
+    ]);
+
+    $record = DB::table('password_reset_tokens')
+        ->where('email', $request->email)
+        ->first();
+
+    if (!$record || !Hash::check($request->otp, $record->token)) {
+        throw ValidationException::withMessages([
+            'otp' => ['Invalid or expired OTP.'],
+        ]);
+    }
+
+    return response()->json([
+        'success' => true,
+        'message' => 'OTP verified successfully.',
+    ]);
+}
+
+
+public function resetPassword(Request $request)
+{
+    $request->validate([
+        'email' => 'required|email',
+        'otp' => 'required|string',
+        'password' => [
+            'required',
+            'confirmed',
+            'min:8',
+            'regex:/[a-z]/',
+            'regex:/[A-Z]/',
+            'regex:/[@$!%*#?&]/',
+        ],
+    ]);
+
+    $record = DB::table('password_reset_tokens')
+        ->where('email', $request->email)
+        ->first();
+
+    if (!$record || !Hash::check($request->otp, $record->token)) {
+        throw ValidationException::withMessages([
+            'otp' => ['Invalid or expired OTP.'],
+        ]);
+    }
+
+    $user = User::where('email', $request->email)->first();
+
+    if (!$user) {
+        throw ValidationException::withMessages([
+            'email' => ['User not found.'],
+        ]);
+    }
+
+    // Update password (model auto-hashes)
+    $user->update([
+        'password' => $request->password,
+    ]);
+
+    // Delete OTP after success
+    DB::table('password_reset_tokens')
+        ->where('email', $request->email)
+        ->delete();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Password reset successfully.',
+    ]);
+}
+
 }
