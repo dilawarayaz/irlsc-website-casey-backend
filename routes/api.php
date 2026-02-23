@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ManualMatchController;
 use App\Http\Controllers\MatchController;
 use App\Http\Controllers\MatchRequestController;
@@ -26,7 +27,7 @@ Route::get('profiles/private', [ProfileController::class, 'getPrivateProfiles'])
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     // Route::get('user/profile', [UserProfileController::class, 'show']);
-     Route::post('/user/profile-picture', [AuthController::class, 'updateProfilePicture']);
+    Route::post('/user/profile-picture', [AuthController::class, 'updateProfilePicture']);
     Route::post('/upload-video', [ProfileController::class, 'uploadVideo']);
     Route::post('profile/public/images', [ProfileController::class, 'uploadImages']);
     Route::post('/toggle-profile-type', [ProfileController::class, 'toggleProfileType']);
@@ -51,6 +52,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/events', [EventController::class, 'store']);
     Route::post('/events/{event}/like', [EventController::class, 'toggleLike']);
     Route::post('/events/{event}/attend', [EventController::class, 'toggleAttend']);
+
+    //  chat rooutes
+    Route::get('/conversations', [ChatController::class, 'getConversations']);
+    Route::get('/messages/{matchId}', [ChatController::class, 'getMessages']);
+    Route::post('/messages/{matchId}', [ChatController::class, 'sendMessage']);
 });
 
 // Admin routes
