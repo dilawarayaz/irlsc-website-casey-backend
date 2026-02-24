@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\AiMatchController;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ManualMatchController;
 use App\Http\Controllers\MatchController;
@@ -68,4 +69,5 @@ Route::middleware(['auth:sanctum', 'is_admin'])->group(function () {
     Route::get('/admin/{id}/manual-match', [ManualMatchController::class, 'getMatches']);
     Route::post('/user/match-request', [MatchRequestController::class, 'store']);
     Route::post('/admin/match-request/{id}/handle', [MatchRequestController::class, 'handle']);
+    Route::post('/ai/analyze-match', [AiMatchController::class, 'analyze']);
 });

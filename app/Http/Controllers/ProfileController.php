@@ -157,8 +157,8 @@ class ProfileController extends Controller
             ], 500);
         }
     }
-    
-    
+
+
     public function uploadImages(Request $request): JsonResponse
     {
         try {
@@ -343,25 +343,24 @@ class ProfileController extends Controller
     }
 
     public function getPrivateProfiles(Request $request)
-{
-    try {
-        // Load videos along with answers and images
-        $privateUsers = User::where('profile_type', 'private')
-            ->with(['answers.question', 'images', 'videos']) // Added videos relation
-            ->get();
+    {
+        try {
+            // Load videos along with answers and images
+            $privateUsers = User::where('profile_type', 'private')
+                ->with(['answers.question', 'images', 'videos']) // Added videos relation
+                ->get();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Private profiles fetched successfully.',
-            'data' => UserResource::collection($privateUsers),
-        ], 200);
-    } catch (\Exception $e) {
-        Log::error('Private profiles fetch error: ' . $e->getMessage());
-        return response()->json([
-            'success' => false,
-            'message' => 'Failed to fetch private profiles.',
-        ], 500);
+            return response()->json([
+                'success' => true,
+                'message' => 'Private profiles fetched successfully.',
+                'data' => UserResource::collection($privateUsers),
+            ], 200);
+        } catch (\Exception $e) {
+            Log::error('Private profiles fetch error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to fetch private profiles.',
+            ], 500);
+        }
     }
-}
-
 }
