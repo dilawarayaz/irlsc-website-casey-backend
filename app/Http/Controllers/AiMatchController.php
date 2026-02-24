@@ -71,7 +71,7 @@ class AiMatchController extends Controller
 
     private function systemPrompt(): string
     {
-        // Nowdoc syntax use kiya taake single/double quotes escape na karne padein
+        
         return <<<'PROMPT'
 You are an expert matchmaking psychologist with 20+ years of experience in long-term relationship compatibility.
 
