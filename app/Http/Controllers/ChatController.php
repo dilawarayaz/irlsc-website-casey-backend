@@ -28,7 +28,7 @@ class ChatController extends Controller
 
             $conversations = [];
             foreach ($matches as $match) {
-                $matchUserId = ($match->user_id_1 === $user->id) ? $match->user_id_2 : $match->user_id_1;
+                $matchUserId = ($match->user_id_1 == $user->id) ? $match->user_id_2 : $match->user_id_1;
                 $matchUser = User::find($matchUserId);
 
                 if (!$matchUser) continue;
