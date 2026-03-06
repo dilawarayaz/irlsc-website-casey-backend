@@ -13,6 +13,10 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\EventController;
+use App\Http\Controllers\VideoCallController;
+
+
+Broadcast::routes(['middleware' => ['auth:sanctum']]);
 
 // Existing auth routes (assume you have them)
 Route::post('/register', [AuthController::class, 'register']);
@@ -23,6 +27,14 @@ Route::get('/getall-users', [AdminUserController::class, 'index']);
 Route::get('/users/{id}', [AdminUserController::class, 'show']);
 Route::get('profiles/public', [ProfileController::class, 'getPublicProfiles']);
 Route::get('profiles/private', [ProfileController::class, 'getPrivateProfiles']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/video-call/initiate', [VideoCallController::class, 'initiate']);
+    Route::post('/video-call/offer',     [VideoCallController::class, 'sendOffer']);
+    Route::post('/video-call/answer',    [VideoCallController::class, 'sendAnswer']);
+    Route::post('/video-call/candidate', [VideoCallController::class, 'sendCandidate']);
+    Route::post('/video-call/end',       [VideoCallController::class, 'endCall']);
+});
 
 // testing
 // Protected routes
