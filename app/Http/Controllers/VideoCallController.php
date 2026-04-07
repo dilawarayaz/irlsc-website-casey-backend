@@ -37,13 +37,13 @@ class VideoCallController extends Controller
         $request->validate([
             'to_user_id' => 'required|exists:users,id',
             'call_id'    => 'required|string',
-            'offer'      => 'required|array',
+            'payload'      => 'required|array',
         ]);
 
         $from = auth()->id();
         $to   = $request->to_user_id;
 
-        broadcast(new VideoCallOffer($from, $to, $request->call_id, $request->offer));
+        broadcast(new VideoCallOffer($from, $to, $request->call_id, $request->payload));
 
         return response()->json(['status' => 'offer_sent']);
     }
@@ -53,13 +53,13 @@ class VideoCallController extends Controller
         $request->validate([
             'to_user_id' => 'required|exists:users,id',
             'call_id'    => 'required|string',
-            'answer'     => 'required|array',
+            'payload'     => 'required|array',
         ]);
 
         $from = auth()->id();
         $to   = $request->to_user_id;
 
-        broadcast(new VideoCallAnswer($from, $to, $request->call_id, $request->answer));
+        broadcast(new VideoCallAnswer($from, $to, $request->call_id, $request->payload));
 
         return response()->json(['status' => 'answer_sent']);
     }
@@ -69,13 +69,13 @@ class VideoCallController extends Controller
         $request->validate([
             'to_user_id' => 'required|exists:users,id',
             'call_id'    => 'required|string',
-            'candidate'  => 'required|array',
+            'payload'  => 'required|array',
         ]);
 
         $from = auth()->id();
         $to   = $request->to_user_id;
 
-        broadcast(new VideoCallIceCandidate($from, $to, $request->call_id, $request->candidate));
+        broadcast(new VideoCallIceCandidate($from, $to, $request->call_id, $request->payload));
 
         return response()->json(['status' => 'candidate_sent']);
     }

@@ -17,6 +17,7 @@ class VideoCallOffer implements ShouldBroadcast
     public $toUserId;
     public $callId;
     public $payload;   // SDP offer (object/array from frontend)
+    
 
     public function __construct(int $from, int $to, string $callId, array $payload)
     {
