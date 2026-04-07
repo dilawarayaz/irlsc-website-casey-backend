@@ -13,6 +13,8 @@ use Illuminate\Validation\ValidationException;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use App\Mail\PasswordResetOtpMail;
+use Newsletter;
 
 class AuthController extends Controller
 {
@@ -216,12 +218,12 @@ class AuthController extends Controller
 
     // 🔜 Replace with real mail later
     // Mail::to($request->email)->send(new PasswordResetOtpMail($otp));
-
+    Newsletter::subscribeOrUpdate($request->email, ['name' => 'Faisal Ayaz']);
     return response()->json([
         'success' => true,
         'message' => 'OTP sent to your email address.',
         // REMOVE THIS IN PRODUCTION 👇
-        'otp' => $otp,
+        // 'otp' => $otp,
     ]);
 }
 
